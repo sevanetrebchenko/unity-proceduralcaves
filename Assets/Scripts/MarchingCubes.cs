@@ -1,5 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.PackageManager.UI;
 using UnityEngine;
 
 public class MarchingCubes : MonoBehaviour
@@ -8,38 +10,53 @@ public class MarchingCubes : MonoBehaviour
 	List<int> triangles = new List<int>();
 	MeshFilter meshFilter;
 
-	float terrainSurfaceLevel = 0.8f;
-	int width = 10;
-	int height = 10;
-	int depth = 20;
+	[Range(-1.0f, 1.0f)]
+	public float terrainSurfaceLevel = 0.8f;
+
+	[Range(1, 100)]
+	public int width = 10;
+
+	[Range(1, 100)]
+	public int height = 10;
+
+	[Range(1, 100)]
+	public int depth = 20;
+
+	[SerializeField]
+	public bool smoothTerrain = false;
+
+	[SerializeField]
+	public bool surfaceTerrain = false;
+
 	float[,,] terrainMap;
 
 	private static readonly Vector3Int[] cornerTable = new Vector3Int[8]
 	{
-		new Vector3Int(0, 0, 0),
-		new Vector3Int(1, 0, 0),
-		new Vector3Int(1, 1, 0),
-		new Vector3Int(0, 1, 0),
-		new Vector3Int(0, 0, 1),
-		new Vector3Int(1, 0, 1),
-		new Vector3Int(1, 1, 1),
-		new Vector3Int(0, 1, 1),
+		new Vector3Int(0, 0, 0), // 0
+		new Vector3Int(1, 0, 0), // 1
+		new Vector3Int(1, 1, 0), // 2
+		new Vector3Int(0, 1, 0), // 3
+		new Vector3Int(0, 0, 1), // 4
+		new Vector3Int(1, 0, 1), // 5
+		new Vector3Int(1, 1, 1), // 6
+		new Vector3Int(0, 1, 1), // 7
 	};
 
-	private static readonly Vector3[,] edgeTable = new Vector3[12, 2]
+
+	private static readonly int[,] edgeTable = new int[12, 2]
 	{
-		{ new Vector3(0.0f, 0.0f, 0.0f), new Vector3(1.0f, 0.0f, 0.0f) },
-		{ new Vector3(1.0f, 0.0f, 0.0f), new Vector3(1.0f, 1.0f, 0.0f) },
-		{ new Vector3(0.0f, 1.0f, 0.0f), new Vector3(1.0f, 1.0f, 0.0f) },
-		{ new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 1.0f, 0.0f) },
-		{ new Vector3(0.0f, 0.0f, 1.0f), new Vector3(1.0f, 0.0f, 1.0f) },
-		{ new Vector3(1.0f, 0.0f, 1.0f), new Vector3(1.0f, 1.0f, 1.0f) },
-		{ new Vector3(0.0f, 1.0f, 1.0f), new Vector3(1.0f, 1.0f, 1.0f) },
-		{ new Vector3(0.0f, 0.0f, 1.0f), new Vector3(0.0f, 1.0f, 1.0f) },
-		{ new Vector3(0.0f, 0.0f, 0.0f), new Vector3(0.0f, 0.0f, 1.0f) },
-		{ new Vector3(1.0f, 0.0f, 0.0f), new Vector3(1.0f, 0.0f, 1.0f) },
-		{ new Vector3(1.0f, 1.0f, 0.0f), new Vector3(1.0f, 1.0f, 1.0f) },
-		{ new Vector3(0.0f, 1.0f, 0.0f), new Vector3(0.0f, 1.0f, 1.0f) },
+		{ 0, 1 },
+		{ 1, 2 },
+		{ 3, 2 },
+		{ 0, 3 },
+		{ 4, 5 },
+		{ 5, 6 },
+		{ 7, 6 },
+		{ 4, 7 },
+		{ 0, 4 },
+		{ 1, 5 },
+		{ 2, 6 },
+		{ 3, 7 },
 	};
 
 	private static readonly int[,] triangleTable = new int[,]
@@ -302,8 +319,8 @@ public class MarchingCubes : MonoBehaviour
 		{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 	};
 
-	private void Start()
-	{
+	public void GenerateMesh()
+    {
 		meshFilter = GetComponent<MeshFilter>();
 		terrainMap = new float[width + 1, height + 1, depth + 1];
 
@@ -321,29 +338,18 @@ public class MarchingCubes : MonoBehaviour
 				for (int z = 0; z < depth + 1; ++z)
                 {
 					// Get height.
-					float blockHeight = (float)height * PerlinNoise.Noise((float)x / 16f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
-					float point = 0;
+					float blockHeight;
 
-					// Below terrain level.
-					if (y <= blockHeight - 0.5)
+					if (surfaceTerrain)
                     {
-						point = 0f;
-                    }
-					// Above terrain level.
-					else if (y > blockHeight + 0.5)
-                    {
-						point = 1f;
-                    }
-					else if (y > blockHeight)
-                    {
-						point = (float)y - blockHeight;
-                    }
+						blockHeight = (float)height * Mathf.PerlinNoise((float)x / 16.5f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+					}
 					else
                     {
-						point = blockHeight - (float)y;
-                    }
+						blockHeight = (float)height * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+					}
 
-					terrainMap[x, y, z] = blockHeight;
+					terrainMap[x, y, z] = (float)y - blockHeight;
                 }
             }
         }
@@ -365,8 +371,14 @@ public class MarchingCubes : MonoBehaviour
 		return configIndex;
     }
 
-    private void MarchCube(Vector3 cubePosition, float[] cube)
+    private void MarchCube(Vector3Int cubePosition)
 	{
+		float[] cube = new float[8];
+		for (int i = 0; i < 8; ++i)
+		{
+			cube[i] = SampleTerrain(cubePosition + cornerTable[i]);
+		}
+
 		int triangleConfigIndex = GetCubeConfiguration(cube);
 
 		// Cube is completely in the air or completely in the ground.
@@ -389,18 +401,43 @@ public class MarchingCubes : MonoBehaviour
 					return;
                 }
 
-				Vector3 edgeVertex1 = cubePosition + edgeTable[index, 0];
-				Vector3 edgeVertex2 = cubePosition + edgeTable[index, 1];
+				Vector3 edgeVertex1 = cubePosition + cornerTable[edgeTable[index, 0]];
+				Vector3 edgeVertex2 = cubePosition + cornerTable[edgeTable[index, 1]];
+				Vector3 vertexPosition;
 
-				// TODO: Replace with interpolation based on the noise at the vertices.
-				Vector3 edgeMidpoint = (edgeVertex1 + edgeVertex2) / 2f;
+				if (smoothTerrain)
+                {
+					float edgeVertex1Noise = cube[edgeTable[index, 0]];
+					float edgeVertex2Noise = cube[edgeTable[index, 1]];
 
-				vertices.Add(edgeMidpoint);
+					float diff = edgeVertex2Noise - edgeVertex1Noise;
+
+					if (diff == 0)
+                    {
+						diff = terrainSurfaceLevel;
+                    }
+					else
+                    {
+						diff = (terrainSurfaceLevel - edgeVertex1Noise) / diff;
+                    }
+
+					vertexPosition = edgeVertex1 + ((edgeVertex2 - edgeVertex1) * diff);
+                }
+				else
+                {
+					vertexPosition = (edgeVertex1 + edgeVertex2) / 2f;
+				}
+
+				vertices.Add(vertexPosition);
 				triangles.Add(vertices.Count - 1);
 				++edgeIndex;
-            }
+			}
         }
+    }
 
+	float SampleTerrain(Vector3Int point)
+    {
+		return terrainMap[point.x, point.y, point.z];
     }
 
 	void ClearMeshData()
@@ -419,29 +456,19 @@ public class MarchingCubes : MonoBehaviour
 			{
 				for (int z = 0; z < depth; ++z)
 				{
-					float[] cube = new float[8];
-					for (int i = 0; i < 8; ++i)
-                    {
-						Vector3Int cubeCorner = new Vector3Int(x, y, z) + cornerTable[i];
-						cube[i] = terrainMap[cubeCorner.x, cubeCorner.y, cubeCorner.z];
-                    }
-
-					MarchCube(new Vector3(x, y, z), cube);
+					MarchCube(new Vector3Int(x, y, z));
 				}
 			}
 		}
-
-		BuildMesh();
 	}
 
 	void BuildMesh()
     {
 		Mesh mesh = new Mesh();
 		mesh.vertices = vertices.ToArray();
-		triangles.Reverse();
 		mesh.triangles = triangles.ToArray();
 
 		mesh.RecalculateNormals();
 		meshFilter.mesh = mesh;
-    }
+	}
 }
