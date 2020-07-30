@@ -3,19 +3,23 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(MarchingCubes))]
+[CustomEditor(typeof(Chunk))]
 public class TerrainEditor : Editor
 {
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
+        /*
 
-        MarchingCubes marchingCubes = (MarchingCubes)target;
+            Chunk marchingCubes = (Chunk)target;
 
-        if (GUILayout.Button("Generate Mesh"))
-        {
-            Debug.Log("Generating mesh...");
-            marchingCubes.GenerateMesh();
+            if (GUILayout.Button("Generate Mesh"))
+            {
+                Debug.Log("Generating mesh...");
+                marchingCubes.GenerateMesh();
+            }
         }
+        */
+
     }
 }

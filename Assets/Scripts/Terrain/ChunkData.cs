@@ -1,47 +1,39 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.PackageManager.UI;
 using UnityEngine;
 
-public class MarchingCubes : MonoBehaviour
+public static class ChunkData 
 {
-	List<Vector3> vertices = new List<Vector3>();
-	List<int> triangles = new List<int>();
+	public static float terrainSurfaceLevel = 0.5f;
+	public static int chunkWidth = 32;
+	public static int chunkHeight = 40;
+	public static int chunkDepth = 32;
 
-	MeshFilter meshFilter;
-	MeshCollider meshCollider;
+	public static float baseTerrainHeight = 0.0f;  // minimum terrain height
+	public static float terrainHeightRange = 40.0f; // maximum height above the baseTerrainHeight.
 
-	[Range(-1.0f, 1.0f)]
-	public float terrainSurfaceLevel = 0.8f;
-
-	[Range(1, 100)]
-	public int width = 10;
-
-	[Range(1, 100)]
-	public int height = 10;
-
-	[Range(1, 100)]
-	public int depth = 20;
-
-	[SerializeField]
-	public bool smoothTerrain = false;
-
-	public enum TerrainType
+	public static float GetTerrainHeight(Chunk.TerrainType terrainType, int x, int y, int z)
     {
-		SURFACE,
-		CAVE
+		float blockHeight;
+		switch (terrainType)
+		{
+			case Chunk.TerrainType.SURFACE:
+				blockHeight = baseTerrainHeight + terrainHeightRange * Mathf.PerlinNoise((float)x / 16.5f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+				break;
+			case Chunk.TerrainType.CAVE:
+				blockHeight = baseTerrainHeight + terrainHeightRange * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+				break;
+			default:
+				Debug.LogWarning("Unknown terrain type.");
+				blockHeight = baseTerrainHeight + terrainHeightRange * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+				break;
+		}
+
+		return blockHeight;
     }
-	[SerializeField]
-	public TerrainType terrainType = TerrainType.SURFACE;
 
-	[SerializeField]
-	public bool flatShaded = true;
-
-	float[,,] terrainMap;
-
-	private static readonly Vector3Int[] cornerTable = new Vector3Int[8]
-	{
+	public static readonly Vector3Int[] cornerTable = new Vector3Int[8]
+{
 		new Vector3Int(0, 0, 0), // 0
 		new Vector3Int(1, 0, 0), // 1
 		new Vector3Int(1, 1, 0), // 2
@@ -50,10 +42,9 @@ public class MarchingCubes : MonoBehaviour
 		new Vector3Int(1, 0, 1), // 5
 		new Vector3Int(1, 1, 1), // 6
 		new Vector3Int(0, 1, 1), // 7
-	};
+};
 
-
-	private static readonly int[,] edgeTable = new int[12, 2]
+	public static readonly int[,] edgeTable = new int[12, 2]
 	{
 		{ 0, 1 },
 		{ 1, 2 },
@@ -69,7 +60,7 @@ public class MarchingCubes : MonoBehaviour
 		{ 3, 7 },
 	};
 
-	private static readonly int[,] triangleTable = new int[,]
+	public static readonly int[,] triangleTable = new int[,]
 	{
 		{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 		{0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
@@ -328,191 +319,4 @@ public class MarchingCubes : MonoBehaviour
 		{0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
 		{-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 	};
-
-	public void GenerateMesh()
-    {
-		meshFilter = GetComponent<MeshFilter>();
-		meshCollider = GetComponent<MeshCollider>();
-
-		transform.tag = "Terrain";
-
-		terrainMap = new float[width + 1, height + 1, depth + 1];
-
-		PopulateTerrainMap();
-		CreateMeshData();
-		BuildMesh();
-	}
-
-    private void PopulateTerrainMap()
-    {
-		for (int x = 0; x < width + 1; ++x)
-        {
-			for (int y = 0; y < height + 1; ++y)
-            {
-				for (int z = 0; z < depth + 1; ++z)
-                {
-					// Get height.
-					float blockHeight;
-
-					switch (terrainType)
-                    {
-						case TerrainType.SURFACE:
-							blockHeight = (float)height * Mathf.PerlinNoise((float)x / 16.5f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
-							break;
-						case TerrainType.CAVE:
-							blockHeight = (float)height * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
-							break;
-						default:
-							Debug.LogWarning("Unknown terrain type.");
-							blockHeight = (float)height * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
-							break;
-					}
-
-					terrainMap[x, y, z] = (float)y - blockHeight;
-                }
-            }
-        }
-    }
-
-	private int GetCubeConfiguration(float[] cube)
-    {
-		int configIndex = 0;
-		for (int i = 0; i < 8; ++i)
-        {
-			// Above the surface
-			if (cube[i] > terrainSurfaceLevel)
-            {
-				// Set config index;
-				configIndex |= 1 << i;
-            }
-        }
-
-		return configIndex;
-    }
-
-    private void MarchCube(Vector3Int cubePosition)
-	{
-		float[] cube = new float[8];
-		for (int i = 0; i < 8; ++i)
-		{
-			cube[i] = SampleTerrain(cubePosition + cornerTable[i]);
-		}
-
-		int triangleConfigIndex = GetCubeConfiguration(cube);
-
-		// Cube is completely in the air or completely in the ground.
-		// No need to add anything.
-		if (triangleConfigIndex == 0 || triangleConfigIndex == 255)
-        {
-			return;
-        }
-
-		int edgeIndex = 0;
-		for (int i = 0; i < 5; ++i)
-        {
-			for (int j = 0; j < 3; ++j)
-            {
-				int index = triangleTable[triangleConfigIndex, edgeIndex];
-
-				// Reached the end of this configuration.
-				if (index == -1)
-                {
-					return;
-                }
-
-				Vector3 edgeVertex1 = cubePosition + cornerTable[edgeTable[index, 0]];
-				Vector3 edgeVertex2 = cubePosition + cornerTable[edgeTable[index, 1]];
-				Vector3 vertexPosition;
-
-				if (smoothTerrain)
-                {
-					float edgeVertex1Noise = cube[edgeTable[index, 0]];
-					float edgeVertex2Noise = cube[edgeTable[index, 1]];
-
-					float diff = edgeVertex2Noise - edgeVertex1Noise;
-
-					if (diff == 0)
-                    {
-						diff = terrainSurfaceLevel;
-                    }
-					else
-                    {
-						diff = (terrainSurfaceLevel - edgeVertex1Noise) / diff;
-                    }
-
-					vertexPosition = edgeVertex1 + ((edgeVertex2 - edgeVertex1) * diff);
-                }
-				else
-                {
-					vertexPosition = (edgeVertex1 + edgeVertex2) / 2f;
-				}
-
-				if (!flatShaded)
-                {
-					vertices.Add(vertexPosition);
-					triangles.Add(vertices.Count - 1);
-				}
-				else
-                {
-					triangles.Add(VertexForIndex(vertexPosition));
-                }
-
-
-				++edgeIndex;
-			}
-        }
-    }
-
-	float SampleTerrain(Vector3Int point)
-    {
-		return terrainMap[point.x, point.y, point.z];
-    }
-
-	int VertexForIndex(Vector3 vertex)
-    {
-		for (int i = 0; i < vertices.Count; ++i)
-        {
-			if (vertices[i] == vertex)
-            {
-				return i;
-            }
-        }
-
-		vertices.Add(vertex);
-		return vertices.Count - 1;
-    }
-
-	void ClearMeshData()
-    {
-		vertices.Clear();
-		triangles.Clear();
-    }
-
-	void CreateMeshData()
-	{
-		ClearMeshData(); 
-
-		for (int x = 0; x < width; ++x)
-		{
-			for (int y = 0; y < height; ++y)
-			{
-				for (int z = 0; z < depth; ++z)
-				{
-					MarchCube(new Vector3Int(x, y, z));
-				}
-			}
-		}
-	}
-
-	void BuildMesh()
-    {
-		Mesh mesh = new Mesh();
-		mesh.vertices = vertices.ToArray();
-		mesh.triangles = triangles.ToArray();
-
-		mesh.RecalculateNormals();
-
-		meshFilter.mesh = mesh;
-		meshCollider.sharedMesh = mesh;
-	}
 }
