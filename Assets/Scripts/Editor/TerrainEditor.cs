@@ -14,5 +14,10 @@ public class TerrainEditor : Editor
             Debug.Log("Generating mesh...");
             worldGenerator.Generate();
         }
+
+        if (GUILayout.Button("Clear Chunks"))
+        {
+            worldGenerator.ClearChunks();
+        }
     }
 }

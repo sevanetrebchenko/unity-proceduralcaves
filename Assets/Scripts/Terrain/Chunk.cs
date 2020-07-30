@@ -51,7 +51,6 @@ public class Chunk
 		// Add mesh collider.
 		meshCollider = chunkObject.AddComponent<MeshCollider>();
 
-
 		meshFilter.GetComponent<MeshRenderer>().sharedMaterial = chunkMaterial;
 		chunkObject.transform.tag = "Terrain";
 

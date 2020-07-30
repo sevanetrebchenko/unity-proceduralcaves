@@ -19,12 +19,31 @@ public class WorldGenerator : MonoBehaviour
             for (int z = 0; z < worldChunkSize; ++z)
             {
                 Vector3Int chunkPosition = new Vector3Int(x * ChunkData.chunkWidth, 0, z * ChunkData.chunkDepth);
-                float chunkHeight = ChunkData.terrainHeightRange;
+                if (!worldChunks.ContainsKey(chunkPosition))
+                {
+                    Debug.Log("Creating new chunk");
+                    float chunkHeight = ChunkData.terrainHeightRange;
 
-                worldChunks.Add(chunkPosition, new Chunk(chunkPosition, Chunk.TerrainType.SURFACE));
+                    Chunk chunk = new Chunk(chunkPosition, Chunk.TerrainType.SURFACE);
+                    chunk.chunkObject.transform.parent = transform;
 
-                worldChunks[chunkPosition].chunkObject.transform.SetParent(transform);
-                ChunkData.terrainHeightRange = chunkHeight;
+                    worldChunks.Add(chunkPosition, chunk);
+
+                    ChunkData.terrainHeightRange = chunkHeight;
+                }
+            }
+        }
+    }
+
+    public void ClearChunks()
+    {
+        for (int x = 0; x < worldChunkSize; ++x)
+        {
+            for (int z = 0; z < worldChunkSize; ++z)
+            {
+                Vector3Int chunkPosition = new Vector3Int(x * ChunkData.chunkWidth, 0, z * ChunkData.chunkDepth);
+                DestroyImmediate(worldChunks[chunkPosition].chunkObject);
+                worldChunks.Remove(chunkPosition);
             }
         }
     }
