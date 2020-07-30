@@ -8,7 +8,9 @@ public class MarchingCubes : MonoBehaviour
 {
 	List<Vector3> vertices = new List<Vector3>();
 	List<int> triangles = new List<int>();
+
 	MeshFilter meshFilter;
+	MeshCollider meshCollider;
 
 	[Range(-1.0f, 1.0f)]
 	public float terrainSurfaceLevel = 0.8f;
@@ -25,8 +27,16 @@ public class MarchingCubes : MonoBehaviour
 	[SerializeField]
 	public bool smoothTerrain = false;
 
+	public enum TerrainType
+    {
+		SURFACE,
+		CAVE
+    }
 	[SerializeField]
-	public bool surfaceTerrain = false;
+	public TerrainType terrainType = TerrainType.SURFACE;
+
+	[SerializeField]
+	public bool flatShaded = true;
 
 	float[,,] terrainMap;
 
@@ -322,6 +332,10 @@ public class MarchingCubes : MonoBehaviour
 	public void GenerateMesh()
     {
 		meshFilter = GetComponent<MeshFilter>();
+		meshCollider = GetComponent<MeshCollider>();
+
+		transform.tag = "Terrain";
+
 		terrainMap = new float[width + 1, height + 1, depth + 1];
 
 		PopulateTerrainMap();
@@ -340,13 +354,18 @@ public class MarchingCubes : MonoBehaviour
 					// Get height.
 					float blockHeight;
 
-					if (surfaceTerrain)
+					switch (terrainType)
                     {
-						blockHeight = (float)height * Mathf.PerlinNoise((float)x / 16.5f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
-					}
-					else
-                    {
-						blockHeight = (float)height * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+						case TerrainType.SURFACE:
+							blockHeight = (float)height * Mathf.PerlinNoise((float)x / 16.5f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+							break;
+						case TerrainType.CAVE:
+							blockHeight = (float)height * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+							break;
+						default:
+							Debug.LogWarning("Unknown terrain type.");
+							blockHeight = (float)height * PerlinNoise.Noise((float)x / 16.5f * 1.5f + 0.001f, (float)y / 16f * 1.5f + 0.001f, (float)z / 16f * 1.5f + 0.001f);
+							break;
 					}
 
 					terrainMap[x, y, z] = (float)y - blockHeight;
@@ -428,8 +447,17 @@ public class MarchingCubes : MonoBehaviour
 					vertexPosition = (edgeVertex1 + edgeVertex2) / 2f;
 				}
 
-				vertices.Add(vertexPosition);
-				triangles.Add(vertices.Count - 1);
+				if (!flatShaded)
+                {
+					vertices.Add(vertexPosition);
+					triangles.Add(vertices.Count - 1);
+				}
+				else
+                {
+					triangles.Add(VertexForIndex(vertexPosition));
+                }
+
+
 				++edgeIndex;
 			}
         }
@@ -438,6 +466,20 @@ public class MarchingCubes : MonoBehaviour
 	float SampleTerrain(Vector3Int point)
     {
 		return terrainMap[point.x, point.y, point.z];
+    }
+
+	int VertexForIndex(Vector3 vertex)
+    {
+		for (int i = 0; i < vertices.Count; ++i)
+        {
+			if (vertices[i] == vertex)
+            {
+				return i;
+            }
+        }
+
+		vertices.Add(vertex);
+		return vertices.Count - 1;
     }
 
 	void ClearMeshData()
@@ -469,6 +511,8 @@ public class MarchingCubes : MonoBehaviour
 		mesh.triangles = triangles.ToArray();
 
 		mesh.RecalculateNormals();
+
 		meshFilter.mesh = mesh;
+		meshCollider.sharedMesh = mesh;
 	}
 }
