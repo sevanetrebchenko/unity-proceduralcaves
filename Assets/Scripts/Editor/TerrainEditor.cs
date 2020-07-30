@@ -1,25 +1,18 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 
-[CustomEditor(typeof(Chunk))]
+[CustomEditor(typeof(WorldGenerator))]
 public class TerrainEditor : Editor
 {
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
-        /*
+        WorldGenerator worldGenerator = (WorldGenerator)target;
 
-            Chunk marchingCubes = (Chunk)target;
-
-            if (GUILayout.Button("Generate Mesh"))
-            {
-                Debug.Log("Generating mesh...");
-                marchingCubes.GenerateMesh();
-            }
+        if (GUILayout.Button("Generate Mesh"))
+        {
+            Debug.Log("Generating mesh...");
+            worldGenerator.Generate();
         }
-        */
-
     }
 }

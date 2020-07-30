@@ -61,14 +61,6 @@ public class Chunk
 		BuildMesh();
 	}
 
-	public void GenerateMesh()
-    {
-		terrainMap = new float[ChunkData.chunkWidth + 1, ChunkData.chunkHeight + 1, ChunkData.chunkDepth + 1];
-		PopulateTerrainMap();
-		CreateMeshData();
-		BuildMesh();
-	}
-
     private void PopulateTerrainMap()
     {
 		for (int x = 0; x < ChunkData.chunkWidth + 1; ++x)

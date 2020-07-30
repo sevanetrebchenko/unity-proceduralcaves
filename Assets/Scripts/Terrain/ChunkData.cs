@@ -10,7 +10,7 @@ public static class ChunkData
 	public static int chunkDepth = 32;
 
 	public static float baseTerrainHeight = 0.0f;  // minimum terrain height
-	public static float terrainHeightRange = 40.0f; // maximum height above the baseTerrainHeight.
+	public static float terrainHeightRange = 10.0f; // maximum height above the baseTerrainHeight.
 
 	public static float GetTerrainHeight(Chunk.TerrainType terrainType, int x, int y, int z)
     {
@@ -31,6 +31,11 @@ public static class ChunkData
 
 		return blockHeight;
     }
+
+	static float Evaluate(Vector3Int point)
+    {
+		return 0;
+	}
 
 	public static readonly Vector3Int[] cornerTable = new Vector3Int[8]
 {
